@@ -56,16 +56,21 @@ Clasificaci-n-y-correcci-n/
 
 ## Datos Requeridos
 
-### Fichero: `2020_10_10-2020_12_29.csv`
+### Fichero: `2023_12_13-2024_12_31_1min.csv`
 
 | Propiedad | Valor |
 |---|---|
-| Nombre exacto | `2020_10_10-2020_12_29.csv` |
-| Registros | 233,381 filas |
+| Nombre exacto | `2023_12_13-2024_12_31_1min.csv` |
+| Registros | 552,982 filas |
 | Columnas | 13 |
-| Período | 10/10/2020 al 29/12/2020 |
-| Frecuencia de muestreo | ~5 minutos |
+| Período | 13/12/2023 al 31/12/2024 |
+| Frecuencia de muestreo | 1 minuto (resampleado desde 30 s con media) — el paper original usaba ~5 min |
 | Formato de fecha | `%d/%m/%Y %H:%M:%S` |
+
+> **Por qué 1 minuto y no 5 minutos:** el paper original usaba ~5 min, pero con media de 10 muestras
+> un spike de un solo registro (30 s) queda atenuado al ~10% de su magnitud, lo que dificulta la
+> detección de ruido y valores fuera de rango transitorios. Con 1 minuto (media de 2 muestras)
+> la atenuación es solo del ~50%, conservando la señal de las anomalías de corta duración.
 
 ### Columnas del CSV
 

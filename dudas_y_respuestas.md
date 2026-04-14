@@ -349,8 +349,8 @@ Las mejoras se organizan en cinco bloques: features, modelo, validación, correc
 ### Ventana deslizante (rolling)
 
 ```python
-window_corta = 6    # 30 minutos (6 × 5 min)
-window_larga = 36   # 3 horas
+window_corta = 30   # 30 minutos (30 × 1 min)
+window_larga = 180  # 3 horas
 
 for col in sensores:
     df[f'{col}_rmean_30m']  = df[col].rolling(window_corta).mean()
@@ -366,10 +366,10 @@ for col in sensores:
 
 ```python
 for col in sensores:
-    df[f'{col}_diff1']  = df[col].diff(1)   # cambio en 5 min
-    df[f'{col}_diff6']  = df[col].diff(6)   # cambio en 30 min
-    df[f'{col}_lag1']   = df[col].shift(1)  # valor hace 5 min
-    df[f'{col}_lag6']   = df[col].shift(6)  # valor hace 30 min
+    df[f'{col}_diff1']  = df[col].diff(1)   # cambio en 1 min
+    df[f'{col}_diff30'] = df[col].diff(30)  # cambio en 30 min
+    df[f'{col}_lag1']   = df[col].shift(1)  # valor hace 1 min
+    df[f'{col}_lag30']  = df[col].shift(30) # valor hace 30 min
 ```
 
 `diff1` muy grande → spike. `diff1 = 0` repetido → atascado. Los lags permiten al modelo comparar el estado actual con el reciente.
@@ -436,7 +436,7 @@ df['respuesta_co2_vent'] = df['gradiente_co2'] * df['vent_total']
 ```python
 df['delta_temp_suelo'] = df['XTS'] - df['XTINV']
 df['XTS_diff1'] = df['XTS'].diff(1)
-# XTS_diff1 grande en 5 minutos → físicamente imposible → anomalía
+# XTS_diff1 grande en 1 minuto → físicamente imposible → anomalía
 # XTS constante mientras XTINV varía mucho → sensor atascado
 ```
 
@@ -626,7 +626,7 @@ Separa la serie en tendencia + estacionalidad + residuo. Las anomalías aparecen
 
 ```python
 from statsmodels.tsa.seasonal import STL
-stl = STL(df['XTINV'], period=288)  # 288 intervalos de 5 min = 1 día
+stl = STL(df['XTINV'], period=1440)  # 1440 intervalos de 1 min = 1 día
 result = stl.fit()
 residuo = result.resid
 anomalias = np.abs(residuo) > 3 * residuo.std()

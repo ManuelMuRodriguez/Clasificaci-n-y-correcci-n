@@ -145,10 +145,14 @@ def preparar_dataset(dataset_dir: Path, output_path: Path) -> pd.DataFrame:
     df = df.rename(columns=COLUMN_MAP)
     df = df.rename(columns={"FECHA": "Fecha"})
 
-    # 5. Resamplear de 30 s a 5 min
-    logger.info("Paso 5/5 — Resampleando de 30 s a 5 min (media)...")
+    # 5. Resamplear de 30 s a 1 min
+    #    Se usa 1 minuto (en vez de 5 min) para preservar spikes de corta duración
+    #    que son la señal principal de anomalías de ruido y sensor fuera de rango.
+    #    Con 5 min la media de 10 muestras atenúa un spike a ~10% de su magnitud;
+    #    con 1 min la media de 2 muestras lo atenúa solo a ~50%.
+    logger.info("Paso 5/5 — Resampleando de 30 s a 1 min (media)...")
     df = df.set_index("Fecha")
-    df = df.resample("5min").mean()
+    df = df.resample("1min").mean()
     df = df.reset_index()
     logger.info(f"  Tras resample: {len(df):,} filas")
 
@@ -195,8 +199,8 @@ def main():
     parser.add_argument(
         "--output",
         type=Path,
-        default=PROJECT_ROOT / "data" / "2023_12_13-2024_12_31.csv",
-        help="Ruta del CSV de salida (default: data/2023_12_13-2024_12_31.csv)",
+        default=PROJECT_ROOT / "data" / "2023_12_13-2024_12_31_1min.csv",
+        help="Ruta del CSV de salida (default: data/2023_12_13-2024_12_31_1min.csv)",
     )
     args = parser.parse_args()
 
