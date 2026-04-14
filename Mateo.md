@@ -175,3 +175,7 @@ Las correcciones eran por regla según el tipo detectado:
 | Sensores exteriores | Columnas ya en el CSV | Mapeadas desde AGROCONNECT XLSX (415 ficheros) |
 | Ventanas de ventilación | Ya agregadas en el CSV | Calculadas como media de 6 col. centrales + 7 col. laterales `_POS` |
 | Rangos físicos documentados | No disponibles | Extraídos de `AGROCONNECT_Variables_PLCs.xlsx` |
+| Semilla aleatoria inyección | No controlada (no reproducible) | `random_state=42` en todas las funciones |
+| Rendimiento inyección | Bucles Python con `.loc` fila a fila — horas por celda | Vectorizado con numpy `iat`/`cumsum` — segundos por celda |
+| Inyección Sensor Atascado | Bucle O(N×intentos), itera todos los índices | `cumsum` vectorizado O(N), valida toda la ventana sin NaN |
+| Inyección CO2 sin respuesta | Bucle anidado O(N×intentos) sobre 552K filas | `cumsum` vectorizado con condiciones de contexto |
