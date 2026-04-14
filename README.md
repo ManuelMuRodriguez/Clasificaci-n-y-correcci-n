@@ -69,23 +69,32 @@ Clasificaci-n-y-correcci-n/
 
 ### Columnas del CSV
 
-| Columna | Descripción | Tipo | Rango típico |
-|---|---|---|---|
-| `Fecha` | Timestamp del registro | datetime | 2020-10-10 → 2020-12-29 |
-| `PCO2EXT` | CO2 exterior (ppm) | float64 | 403 – 465 |
-| `PHEXT` | Humedad exterior (%) | float64 | 18 – 94 |
-| `PRAD` | Radiación solar exterior (W/m²) | float64 | 0 – 980 |
-| `PRGINT` | Radiación global interior (W/m²) | float64 | 0 – 505 |
-| `PTEXT` | Temperatura exterior (°C) | float64 | 3 – 29 |
-| `PVV` | Velocidad del viento (m/s) | float64 | — |
-| `UVENT_cen` | Apertura ventana central (%) | int64 | 0 – 100 |
-| `UVENT_lN` | Apertura ventana lateral (%) | int64 | 0 – 100 |
-| `XCO2I` | CO2 interior (ppm) | float64 | 280 – 495 |
-| `XHINV` | Humedad interior (%) | float64 | 21 – 97 |
-| `XTINV` | Temperatura interior (°C) | float64 | 6 – 36 |
-| `XTS` | Temperatura del suelo (°C) | float64 | 15 – 32 |
+| Variable | Descripción | Sensor / Modelo | Rango físico real | Precisión |
+|---|---|---|---|---|
+| `Fecha` | Timestamp del registro | — | Dic 2023 → Dic 2024 | — |
+| `PCO2EXT` | CO2 exterior (ppm) | E+E Elektronik EE820-HV1A6E1 | 0 – 2000 ppm | ±(50 ppm + 2%) |
+| `PHEXT` | Humedad relativa exterior (%) | Campbell HC2A-S3 | 0 – 100 % | ±0.8 % rH |
+| `PRAD` | Radiación global exterior (W/m²) | Campbell SP-214-SS | 0 – 2000 W/m² | — |
+| `PRGINT` | Radiación global interior (W/m²) | Campbell SP-110-SS | 0 – 2000 W/m² | ±1 % |
+| `PTEXT` | Temperatura exterior (°C) | Campbell HC2A-S3 | -40 – 60 °C | ±0.1 °C |
+| `PVV` | Velocidad del viento (m/s) | Wittich & Visser PA2 | 0 – 45.8 m/s | 0.5 m/s |
+| `UVENT_cen` | Apertura media ventanas centrales (%) | De Gier I-DE (encoder) | 0 – 100 % | lineal |
+| `UVENT_lN` | Apertura media ventanas laterales (%) | De Gier I-DE (encoder) | 0 – 100 % | lineal |
+| `XCO2I` | CO2 interior (ppm) | E+E Elektronik EE820-HV1A6E1 | 0 – 2000 ppm | ±(50 ppm + 2%) |
+| `XHINV` | Humedad relativa interior (%) | Campbell HC2A-S3 | 0 – 100 % | ±0.8 % rH |
+| `XTINV` | Temperatura interior (°C) | Campbell HC2A-S3 | -40 – 60 °C | ±0.1 °C |
+| `XTS` | Temperatura suelo 5 cm (°C) | Campbell 109 (NTC) | -50 – 70 °C | ±0.2 °C |
 
-El dataset no debe contener valores nulos en el original — los `NaN` se introducen sintéticamente durante la ejecución.
+> Los rangos físicos reales provienen de las fichas técnicas del sistema AGROCONNECT (PLC1 y PLC6).
+> Fuente: `Dataset/Metadatos_SensoresyActuadores/AGROCONNECT_Variables_PLCs.xlsx`
+
+#### Ventanas de ventilación — agregación
+
+`UVENT_cen` es la media de las posiciones reales de 6 ventanas cenitales (UVCEN1_1, UVCEN1_2, UVCEN1_3, UVCEN2_1, UVCEN2_2, UVCEN2_3).
+`UVENT_lN` es la media de las posiciones reales de 7 ventanas laterales (UVLAT1N, UVLAT1ON, UVLAT1OS, UVLAT1S, UVLAT2E, UVLAT2N, UVLAT2S).
+Datos de ventilación disponibles **desde el 5 de marzo de 2024** (~27 % del dataset total con NaN antes de esa fecha).
+
+El dataset no debe contener valores nulos en el original — los `NaN` se introducen sintéticamente durante la ejecución, excepto los NaN de ventilación que son estructurales (sensor no instalado en el período inicial).
 
 ---
 

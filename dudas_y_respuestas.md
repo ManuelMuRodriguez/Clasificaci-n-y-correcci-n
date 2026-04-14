@@ -63,6 +63,29 @@ margen_factor = 0.1  # 10% del span del rango
 # valor anómalo bajo  =  3 - (25 × 0.1) = 0.5°C
 ```
 
+### Rangos físicos reales — extraídos de las fichas técnicas (PLCs)
+
+Con los metadatos reales del sistema AGROCONNECT (fichero `Dataset/Metadatos_SensoresyActuadores/AGROCONNECT_Variables_PLCs.xlsx`) se dispone de los rangos físicos certificados de cada sensor. Estos son los límites correctos para la categoría "Valores Fuera de Rango" — cualquier valor fuera de ellos es **físicamente imposible** para ese hardware:
+
+| Variable paper | Columna real | Sensor / Modelo | Rango físico real | Precisión |
+|---|---|---|---|---|
+| `PCO2EXT` | `CO2_EXTERIOR_10M` | E+E Elektronik EE820-HV1A6E1 | **0 – 2000 ppm** | ±(50 ppm + 2% del valor) |
+| `PHEXT` | `HR_EXTERIOR_10M` | Campbell HC2A-S3 | **0 – 100 %** | ±0.8 % rH |
+| `PRAD` | `RADGLOBAL_EXTERIOR_10M` | Campbell SP-214-SS | **0 – 2000 W/m²** | — |
+| `PRGINT` | `INVER_RADGLOBAL_INTERIOR_S1` | Campbell SP-110-SS | **0 – 2000 W/m²** | ±1 % |
+| `PTEXT` | `TEMP_EXTERIOR_10M` | Campbell HC2A-S3 | **-40 – 60 °C** | ±0.1 °C |
+| `PVV` | `VELVIENTO_EXTERIOR_10M` | Wittich & Visser PA2 | **0 – 45.8 m/s** (165 km/h) | 0.5 m/s |
+| `UVENT_cen` | Media UVCEN*_POS | De Gier I-DE (encoder) | **0 – 100 %** | lineal 4–20 mA |
+| `UVENT_lN` | Media UVLAT*_POS | De Gier I-DE (encoder) | **0 – 100 %** | lineal 4–20 mA |
+| `XCO2I` | `INVER_CO2_INTERIOR_S1` | E+E Elektronik EE820-HV1A6E1 | **0 – 2000 ppm** | ±(50 ppm + 2% del valor) |
+| `XHINV` | `INVER_HR_INTERIOR_S1` | Campbell HC2A-S3 | **0 – 100 %** | ±0.8 % rH |
+| `XTINV` | `INVER_TEMP_INTERIOR_S1` | Campbell HC2A-S3 | **-40 – 60 °C** | ±0.1 °C |
+| `XTS` | `INVER_TEMP_SUELO5_S1` | Campbell 109 (termistor NTC) | **-50 – 70 °C** | ±0.2 °C |
+
+**Fuente:** PLC1 (sensores interiores S1), PLC6 - Mástil Exterior. Fichero: `AGROCONNECT_Variables_PLCs.xlsx`
+
+Estos rangos deben reemplazar los percentiles P0.1/P99.9 como definición de "Valores Fuera de Rango" en el sistema. Los percentiles estadísticos siguen siendo útiles pero para otra categoría: valores inusuales en el contexto estacional (ver Sección 4).
+
 ---
 
 ## 4. El problema de la estacionalidad con percentiles globales
