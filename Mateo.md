@@ -186,3 +186,61 @@ Las correcciones eran por regla según el tipo detectado:
 | Dataset combinado | No existía | `combined_2024_03_06-2025_03_05_1min.csv` — SCADA + OPC UA, NaN rellenados |
 | NaN SCADA vs OPC UA | — | SCADA 14.3% / OPC UA 3.1% (período solapado jul 2024–mar 2025) |
 | Mapeo XTS en OPC UA | — | `OPC_INVER_TEMP_SUELO5_S2` (S1/S2 cruzado entre sistemas — verificado) |
+
+---
+
+## Fusión de fuentes SCADA + OPC UA (dataset Combined)
+
+### Motivación
+
+SCADA tiene más cobertura temporal (desde mar 2024) pero 14.3% de NaN. OPC UA tiene menos NaN (3.1%) pero solo desde julio 2024. La fusión combina lo mejor de ambas fuentes.
+
+### Proceso de generación
+
+```bash
+python src/prepare_dataset.py --source combined
+# Genera: data/combined_2024_03_06-2025_03_05_1min.csv
+```
+
+### Algoritmo de fusión (`preparar_dataset_combined` en `src/prepare_dataset.py`)
+
+1. **Cargar SCADA** → renombrar a nombres del paper → resamplear a 1 min
+2. **Cargar OPC UA** → renombrar a nombres del paper → resamplear a 1 min
+3. **SCADA como base** — índice de tiempo del SCADA (mar 2024 → mar 2025)
+4. **Alinear OPC UA** al índice de SCADA con `reindex`
+5. **Rellenar NaN** variable a variable: donde SCADA tiene NaN y OPC UA tiene dato, se usa OPC UA
+6. Los NaN que persisten son huecos en ambas fuentes simultáneamente
+
+### Correcciones aplicadas antes de la fusión
+
+| Corrección | Detalle |
+|---|---|
+| Timestamps SCADA → UTC | Se resta el offset `+1H`/`+2H DST` del sufijo de cada timestamp |
+| Mapeo XTS en OPC UA | `OPC_INVER_TEMP_SUELO5_S2` en lugar de `_S1` (etiquetado S1/S2 cruzado entre sistemas) |
+| Verificación del cruce XTS | Confirmado comparando medias diarias en múltiples días: diferencia <0.2°C con `_S2`, ~9°C con `_S1` |
+| Estabilización OPC UA | Los primeros días de OPC UA (julio 2024) presentaban offset en XTS — se incluyen igualmente ya que el relleno solo actúa sobre NaN de SCADA |
+
+### Cobertura temporal por fuente
+
+| Fuente | Período | Filas (1 min) | NaN medio |
+|---|---|---|---|
+| SCADA | 2024-03-06 → 2025-03-05 | 524,161 | 14.3% |
+| OPC UA | 2024-07-18 → 2025-03-04 | 330,322 | 3.1% |
+| Combined | 2024-03-06 → 2025-03-05 | 524,161 | a determinar |
+
+### Variables del paper y sus columnas fuente
+
+| Variable | SCADA | OPC UA |
+|---|---|---|
+| PCO2EXT | `CO2_EXTERIOR_10M` | `OPC_CO2_EXTERIOR_10M` |
+| PHEXT | `HR_EXTERIOR_10M` | `OPC_HR_EXTERIOR_10M` |
+| PRAD | `RADGLOBAL_EXTERIOR_10M` | `OPC_RADGLOBAL_EXTERIOR_10M` |
+| PRGINT | `INVER_RADGLOBAL_INTERIOR_S1` | `OPC_INVER_RADGLOBAL_INTERIOR_S1` |
+| PTEXT | `TEMP_EXTERIOR_10M` | `OPC_TEMP_EXTERIOR_10M` |
+| PVV | `VELVIENTO_EXTERIOR_10M` | `OPC_VELVIENTO_EXTERIOR_10M` |
+| UVENT_cen | media de 6 columnas `_POS` centrales | media de 6 `OPC_..._POS` centrales |
+| UVENT_lN | media de 7 columnas `_POS` laterales | media de 7 `OPC_..._POS` laterales |
+| XCO2I | `INVER_CO2_INTERIOR_S1` | `OPC_INVER_CO2_INTERIOR_S1` |
+| XHINV | `INVER_HR_INTERIOR_S1` | `OPC_INVER_HR_INTERIOR_S1` |
+| XTINV | `INVER_TEMP_INTERIOR_S1` | `OPC_INVER_TEMP_INTERIOR_S1` |
+| XTS | `INVER_TEMP_SUELO5_S1` | `OPC_INVER_TEMP_SUELO5_S2` ⚠️ cruzado |
