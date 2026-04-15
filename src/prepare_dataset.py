@@ -128,6 +128,11 @@ COLUMN_MAP_OPCUA = {
 
 # ── Común ────────────────────────────────────────────────────────────────────
 
+VARIABLES_PAPER = [
+    "PCO2EXT", "PHEXT", "PRAD", "PRGINT", "PTEXT", "PVV",
+    "UVENT_cen", "UVENT_lN", "XCO2I", "XHINV", "XTINV", "XTS",
+]
+
 COLS_FINALES = [
     "Fecha",
     "PCO2EXT", "PHEXT", "PRAD", "PRGINT", "PTEXT", "PVV",
@@ -215,13 +220,87 @@ def preparar_dataset_opcua(opcua_dir: Path, output_path: Path) -> pd.DataFrame:
     return _resamplear_y_exportar(df, output_path)
 
 
+def preparar_dataset_combined(dataset_dir: Path, output_path: Path) -> pd.DataFrame:
+    """
+    Fusiona SCADA y OPC UA usando SCADA como base.
+    Los NaN de SCADA se rellenan con el valor de OPC UA en el mismo minuto.
+    Ambas fuentes se resamplean a 1 min antes de fusionar.
+    """
+    logger.info("=== Fuente: COMBINED (SCADA + OPC UA) ===")
+
+    # Generar ambos datasets en memoria (sin exportar)
+    logger.info("Cargando SCADA...")
+    df_s = _preparar_sin_exportar_scada(dataset_dir)
+
+    logger.info("Cargando OPC UA...")
+    df_o = _preparar_sin_exportar_opcua(dataset_dir)
+
+    # Fusionar: SCADA como base, rellenar NaN con OPC UA
+    logger.info("Fusionando fuentes...")
+    df_s = df_s.set_index("Fecha")
+    df_o = df_o.set_index("Fecha")
+
+    # Alinear al índice de SCADA y rellenar NaN
+    df_o_aligned = df_o.reindex(df_s.index)
+    df_combined = df_s.copy()
+    for col in VARIABLES_PAPER:
+        if col in df_combined.columns and col in df_o_aligned.columns:
+            mask = df_combined[col].isna()
+            df_combined.loc[mask, col] = df_o_aligned.loc[mask, col]
+            n_filled = mask.sum()
+            if n_filled > 0:
+                logger.info(f"  {col}: rellenados {n_filled:,} NaN con OPC UA")
+
+    df_combined = df_combined.reset_index()
+
+    # Resumen NaN tras fusión
+    nulos = df_combined[VARIABLES_PAPER].isnull().sum()
+    resumen = pd.DataFrame({"nulos": nulos, "pct": (nulos / len(df_combined) * 100).round(2)})
+    resumen = resumen[resumen["nulos"] > 0]
+    if not resumen.empty:
+        logger.info(f"\nNaN restantes tras fusión:\n{resumen.to_string()}")
+    else:
+        logger.info("\nSin NaN en el dataset combinado.")
+
+    return _exportar(df_combined, output_path)
+
+
+def _preparar_sin_exportar_scada(dataset_dir: Path) -> pd.DataFrame:
+    df = load_all_files(dataset_dir=dataset_dir / "SCADA", show_progress=True)
+    df["FECHA"] = pd.to_datetime(df["FECHA"])
+    df = df[(df["FECHA"] >= FECHA_INICIO) & (df["FECHA"] <= FECHA_FIN)].copy()
+    df = _agregar_ventilacion(df, COLS_UVENT_CEN_SCADA, COLS_UVENT_LN_SCADA)
+    cols_sel = list(COLUMN_MAP_SCADA.keys()) + ["UVENT_cen", "UVENT_lN", "FECHA"]
+    df = df[[c for c in cols_sel if c in df.columns]].copy()
+    df = df.rename(columns=COLUMN_MAP_SCADA)
+    df = df.rename(columns={"FECHA": "Fecha"})
+    df = df.set_index("Fecha")
+    df = df.resample("1min").mean()
+    return df.reset_index()
+
+
+def _preparar_sin_exportar_opcua(dataset_dir: Path) -> pd.DataFrame:
+    df = load_all_opcua_files(opcua_dir=dataset_dir / "OPCUA", show_progress=True)
+    df = df[(df["Fecha"] >= FECHA_INICIO) & (df["Fecha"] <= FECHA_FIN)].copy()
+    df = _agregar_ventilacion(df, COLS_UVENT_CEN_OPCUA, COLS_UVENT_LN_OPCUA)
+    cols_sel = list(COLUMN_MAP_OPCUA.keys()) + ["UVENT_cen", "UVENT_lN", "Fecha"]
+    df = df[[c for c in cols_sel if c in df.columns]].copy()
+    df = df.rename(columns=COLUMN_MAP_OPCUA)
+    df = df.set_index("Fecha")
+    df = df.resample("1min").mean()
+    return df.reset_index()
+
+
 def _resamplear_y_exportar(df: pd.DataFrame, output_path: Path) -> pd.DataFrame:
     logger.info("Paso 5/5 — Resampleando a 1 min (media)...")
     df = df.set_index("Fecha")
     df = df.resample("1min").mean()
     df = df.reset_index()
     logger.info(f"  Tras resample: {len(df):,} filas")
+    return _exportar(df, output_path)
 
+
+def _exportar(df: pd.DataFrame, output_path: Path) -> pd.DataFrame:
     cols_presentes = [c for c in COLS_FINALES if c in df.columns]
     df = df[cols_presentes]
     df["Fecha"] = df["Fecha"].dt.strftime("%d/%m/%Y %H:%M:%S")
@@ -252,9 +331,9 @@ def main():
     parser = argparse.ArgumentParser(description="Genera el CSV de entrada para el sistema de anomalías.")
     parser.add_argument(
         "--source",
-        choices=["scada", "opcua"],
+        choices=["scada", "opcua", "combined"],
         default="scada",
-        help="Fuente de datos: 'scada' (AGROCONNECT XLSX) o 'opcua' (TXT). Default: scada",
+        help="Fuente de datos: 'scada', 'opcua' o 'combined' (SCADA + OPC UA fusionados). Default: scada",
     )
     parser.add_argument(
         "--dataset-dir",
@@ -271,13 +350,16 @@ def main():
     args = parser.parse_args()
 
     if args.output is None:
-        nombre = f"{'scada' if args.source == 'scada' else 'opcua'}_2024_03_06-2025_03_05_1min.csv"
+        nombres = {"scada": "scada", "opcua": "opcua", "combined": "combined"}
+        nombre = f"{nombres[args.source]}_2024_03_06-2025_03_05_1min.csv"
         args.output = PROJECT_ROOT / "data" / nombre
 
     if args.source == "scada":
         preparar_dataset_scada(dataset_dir=args.dataset_dir, output_path=args.output)
-    else:
+    elif args.source == "opcua":
         preparar_dataset_opcua(opcua_dir=args.dataset_dir, output_path=args.output)
+    else:
+        preparar_dataset_combined(dataset_dir=args.dataset_dir, output_path=args.output)
 
 
 if __name__ == "__main__":
