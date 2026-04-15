@@ -168,11 +168,11 @@ Las correcciones eran por regla según el tipo detectado:
 
 | Aspecto | Estado original (Mateo) | Estado actual |
 |---|---|---|
-| Dataset | `2020_10_10-2020_12_29.csv` (3 meses) | `2023_12_13-2024_12_31_1min.csv` (13 meses) |
+| Dataset | `2020_10_10-2020_12_29.csv` (3 meses) | `scada_2024_03_06-2025_03_05_1min.csv` (12 meses) |
 | Frecuencia | ~5 minutos (media de 10 muestras) | 1 minuto (media de 2 muestras) |
-| Filas | 233,381 | 552,982 |
+| Filas | 233,381 | 524,161 (SCADA) |
 | Rangos "Fuera de Rango" | P0.1/P99.9 del dataset | Límites físicos reales del hardware (fichas técnicas PLC) |
-| Sensores exteriores | Columnas ya en el CSV | Mapeadas desde AGROCONNECT XLSX (415 ficheros) |
+| Sensores exteriores | Columnas ya en el CSV | Mapeadas desde AGROCONNECT XLSX (714 ficheros) en `Dataset/SCADA/` |
 | Ventanas de ventilación | Ya agregadas en el CSV | Calculadas como media de 6 col. centrales + 7 col. laterales `_POS` |
 | Primer dato válido ventanas | Desconocido | 2024-03-05 13:56:30 (fichero AGROCONNECT_20240305-193134.xlsx) |
 | Dataset disponible sin NaN ventanas | — | 2024-03-06 → 2025-11-30 (20 meses limpios) |
@@ -181,3 +181,8 @@ Las correcciones eran por regla según el tipo detectado:
 | Rendimiento inyección | Bucles Python con `.loc` fila a fila — horas por celda | Vectorizado con numpy `iat`/`cumsum` — segundos por celda |
 | Inyección Sensor Atascado | Bucle O(N×intentos), itera todos los índices | `cumsum` vectorizado O(N), valida toda la ventana sin NaN |
 | Inyección CO2 sin respuesta | Bucle anidado O(N×intentos) sobre 552K filas | `cumsum` vectorizado con condiciones de contexto |
+| Timestamps SCADA | — | Convertidos a UTC (se resta el offset +1H/+2H DST del sufijo) |
+| Segunda fuente de datos | No existía | OPC UA (TXT, 503 ficheros en `Dataset/OPCUA/`) desde julio 2024 |
+| Dataset combinado | No existía | `combined_2024_03_06-2025_03_05_1min.csv` — SCADA + OPC UA, NaN rellenados |
+| NaN SCADA vs OPC UA | — | SCADA 14.3% / OPC UA 3.1% (período solapado jul 2024–mar 2025) |
+| Mapeo XTS en OPC UA | — | `OPC_INVER_TEMP_SUELO5_S2` (S1/S2 cruzado entre sistemas — verificado) |
