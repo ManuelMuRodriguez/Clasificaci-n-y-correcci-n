@@ -1,7 +1,9 @@
 """
 data_loader.py
 ==============
-Carga y concatena los ficheros AGROCONNECT_*.xlsx del directorio Dataset.
+Carga y concatena los ficheros de las dos fuentes de datos disponibles:
+  - SCADA (AGROCONNECT_*.xlsx) en Dataset/SCADA/
+  - OPC UA (OPC_YYYYMMDD.txt)  en Dataset/OPCUA/YYYY/MM/
 
 Resumen del formato raw
 -----------------------
@@ -288,6 +290,104 @@ def load_all_files(
     logger.info(
         f"Dataset unificado: {len(df_all):,} filas × {len(df_all.columns)} columnas. "
         f"Rango: {df_all['FECHA'].min()} → {df_all['FECHA'].max()}"
+    )
+
+    return df_all
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OPC UA loader
+# ─────────────────────────────────────────────────────────────────────────────
+
+def load_single_opcua_file(path: str | Path) -> pd.DataFrame:
+    """
+    Carga un fichero OPC_YYYYMMDD.txt (separador ';') y devuelve un DataFrame limpio.
+
+    Particularidades del formato OPC UA
+    ------------------------------------
+    - Cabecera en la primera línea, comienza con '-Fecha;' (se elimina el guion inicial)
+    - Separador: punto y coma ';'
+    - Separador decimal: punto (no requiere conversión)
+    - Timestamps sin sufijo de zona horaria
+    - Columnas de sensores con prefijo 'OPC_'
+    - Datos en orden ASCENDENTE (no se invierte)
+    """
+    path = Path(path)
+    df = pd.read_csv(path, sep=";", dtype=str, on_bad_lines="skip")
+
+    # Limpiar guion inicial del nombre de la primera columna
+    df.columns = [df.columns[0].lstrip("-")] + list(df.columns[1:])
+
+    # Parsear fecha
+    df["Fecha"] = pd.to_datetime(df["Fecha"], errors="coerce")
+    df = df.dropna(subset=["Fecha"])
+
+    # Convertir columnas numéricas
+    for col in df.columns:
+        if col == "Fecha":
+            continue
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    return df.sort_values("Fecha").reset_index(drop=True)
+
+
+def load_all_opcua_files(
+    opcua_dir: str | Path = "Dataset/OPCUA",
+    show_progress: bool = True,
+) -> pd.DataFrame:
+    """
+    Carga y concatena todos los ficheros OPC_*.txt de Dataset/OPCUA/YYYY/MM/.
+
+    Parámetros
+    ----------
+    opcua_dir    : carpeta raíz con subcarpetas YYYY/MM/
+    show_progress: muestra barra de progreso tqdm
+
+    Devuelve
+    --------
+    DataFrame unificado con columna 'Fecha', ordenado cronológicamente,
+    sin timestamps duplicados.
+    """
+    opcua_dir = Path(opcua_dir)
+    files = sorted(opcua_dir.rglob("OPC_*.txt"))
+
+    if not files:
+        raise FileNotFoundError(
+            f"No se encontraron ficheros OPC_*.txt en '{opcua_dir}'"
+        )
+
+    logger.info(f"Cargando {len(files)} ficheros OPC UA desde '{opcua_dir}'...")
+
+    dfs = []
+    errors = []
+    iterator = tqdm(files, desc="Cargando OPC UA", unit="fichero") if show_progress else files
+
+    for f in iterator:
+        try:
+            df = load_single_opcua_file(f)
+            dfs.append(df)
+        except Exception as e:
+            errors.append((f.name, str(e)))
+            logger.warning(f"Error en {f.name}: {e}")
+
+    if errors:
+        logger.warning(f"\n{len(errors)} ficheros con errores: {[e[0] for e in errors]}")
+
+    if not dfs:
+        raise RuntimeError("No se pudo cargar ningún fichero OPC UA correctamente.")
+
+    df_all = pd.concat(dfs, axis=0, ignore_index=True, sort=False)
+    df_all = df_all.sort_values("Fecha").reset_index(drop=True)
+
+    n_before = len(df_all)
+    df_all = df_all.drop_duplicates(subset=["Fecha"], keep="first")
+    n_removed = n_before - len(df_all)
+    if n_removed:
+        logger.info(f"Eliminados {n_removed} timestamps duplicados.")
+
+    logger.info(
+        f"OPC UA unificado: {len(df_all):,} filas × {len(df_all.columns)} columnas. "
+        f"Rango: {df_all['Fecha'].min()} → {df_all['Fecha'].max()}"
     )
 
     return df_all
