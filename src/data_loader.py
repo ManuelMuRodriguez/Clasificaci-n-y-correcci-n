@@ -135,16 +135,22 @@ def _find_header_row(df_raw: pd.DataFrame) -> int:
 
 def _parse_timestamp(series: pd.Series) -> pd.Series:
     """
-    Convierte la columna FECHA al tipo datetime.
-    Elimina sufijos de zona horaria como '+1H', '+2H, DST', '+2H, DST', etc.
+    Convierte la columna FECHA a UTC.
+    Extrae el offset horario del sufijo (+1H o +2H) y lo resta para obtener UTC.
     Formatos observados en el dataset:
-      - '2024-01-15 12:00:00 +1H'
-      - '2024-04-07 00:14:00 +2H, DST'
+      - '2024-01-15 12:00:00 +1H'        → resta 1h → UTC
+      - '2024-04-07 00:14:00 +2H, DST'   → resta 2h → UTC
+    Si no hay sufijo, se asume que ya está en UTC.
     """
-    cleaned = series.astype(str).str.replace(
-        r"\s*\+\d+H.*$", "", regex=True
-    ).str.strip()
-    return pd.to_datetime(cleaned, errors="coerce")
+    raw = series.astype(str)
+    # Extraer offset en horas (1 o 2); si no hay sufijo → 0
+    offsets = raw.str.extract(r"\+(\d+)H", expand=False).fillna("0").astype(int)
+    # Limpiar sufijo y parsear
+    cleaned = raw.str.replace(r"\s*\+\d+H.*$", "", regex=True).str.strip()
+    dt = pd.to_datetime(cleaned, errors="coerce")
+    # Restar el offset para convertir a UTC
+    dt = dt - pd.to_timedelta(offsets, unit="h")
+    return dt
 
 
 def _convert_numeric_columns(df: pd.DataFrame) -> pd.DataFrame:
