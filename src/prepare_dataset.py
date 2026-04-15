@@ -59,7 +59,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Fecha de inicio: primer día con todos los sensores exteriores activos
-FECHA_INICIO = "2023-12-13"
+FECHA_INICIO = "2023-12-14"
 
 # Columnas de ventanas centrales (posición real, 0-100 %)
 COLS_UVENT_CEN = [
