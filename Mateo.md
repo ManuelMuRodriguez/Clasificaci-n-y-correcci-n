@@ -174,6 +174,8 @@ Las correcciones eran por regla según el tipo detectado:
 | Rangos "Fuera de Rango" | P0.1/P99.9 del dataset | Límites físicos reales del hardware (fichas técnicas PLC) |
 | Sensores exteriores | Columnas ya en el CSV | Mapeadas desde AGROCONNECT XLSX (415 ficheros) |
 | Ventanas de ventilación | Ya agregadas en el CSV | Calculadas como media de 6 col. centrales + 7 col. laterales `_POS` |
+| Primer dato válido ventanas | Desconocido | 2024-03-05 13:56:30 (fichero AGROCONNECT_20240305-193134.xlsx) |
+| Dataset disponible sin NaN ventanas | — | 2024-03-06 → 2025-11-30 (20 meses limpios) |
 | Rangos físicos documentados | No disponibles | Extraídos de `AGROCONNECT_Variables_PLCs.xlsx` |
 | Semilla aleatoria inyección | No controlada (no reproducible) | `random_state=42` en todas las funciones |
 | Rendimiento inyección | Bucles Python con `.loc` fila a fila — horas por celda | Vectorizado con numpy `iat`/`cumsum` — segundos por celda |

@@ -59,7 +59,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Fecha de inicio: primer día con todos los sensores exteriores activos
-FECHA_INICIO = "2023-12-14"
+FECHA_INICIO = "2024-03-06"  # Primer día completo con datos de ventanas (_POS)
+FECHA_FIN    = "2025-03-05"  # Un año completo. Test: 2025-03-06 → presente
 
 # Columnas de ventanas centrales (posición real, 0-100 %)
 COLS_UVENT_CEN = [
@@ -108,9 +109,9 @@ def preparar_dataset(dataset_dir: Path, output_path: Path) -> pd.DataFrame:
     logger.info(f"  Raw: {len(df):,} filas × {len(df.columns)} columnas")
 
     # 2. Filtrar rango útil
-    logger.info(f"Paso 2/5 — Filtrando desde {FECHA_INICIO}...")
+    logger.info(f"Paso 2/5 — Filtrando {FECHA_INICIO} → {FECHA_FIN}...")
     df["FECHA"] = pd.to_datetime(df["FECHA"])
-    df = df[df["FECHA"] >= FECHA_INICIO].copy()
+    df = df[(df["FECHA"] >= FECHA_INICIO) & (df["FECHA"] <= FECHA_FIN)].copy()
     logger.info(f"  Tras filtro: {len(df):,} filas")
 
     # 3. Calcular ventilación agregada (media de posiciones reales)
@@ -199,8 +200,8 @@ def main():
     parser.add_argument(
         "--output",
         type=Path,
-        default=PROJECT_ROOT / "data" / "2023_12_13-2024_12_31_1min.csv",
-        help="Ruta del CSV de salida (default: data/2023_12_13-2024_12_31_1min.csv)",
+        default=PROJECT_ROOT / "data" / "2024_03_06-2025_03_05_1min.csv",
+        help="Ruta del CSV de salida (default: data/2024_03_06-2025_03_05_1min.csv)",
     )
     args = parser.parse_args()
 

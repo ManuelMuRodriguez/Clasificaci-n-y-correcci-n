@@ -1,5 +1,5 @@
 # ── Core data ──────────────────────────────────────────
-pandas>=2.0
+pandas>=2.2
 numpy>=1.26
 openpyxl>=3.1        # read .xlsx files
 pyarrow>=15.0        # fast parquet I/O
@@ -10,8 +10,7 @@ seaborn>=0.13
 plotly>=5.20         # interactive plots in notebooks
 
 # ── Machine Learning ────────────────────────────────────
-scikit-learn>=1.4    # preprocessing, metrics, IsolationForest
-tensorflow>=2.15     # Keras LSTM Autoencoder
+scikit-learn>=1.4    # Random Forest, preprocessing, metrics
 
 # ── Notebooks ───────────────────────────────────────────
 jupyter>=1.0
@@ -19,3 +18,7 @@ ipywidgets>=8.0      # progress bars inside notebooks
 
 # ── Utilities ───────────────────────────────────────────
 tqdm>=4.66           # progress bars in scripts
+
+# ── Mejoras futuras (descomentar cuando se implementen) ─
+# tensorflow>=2.15   # Keras LSTM Autoencoder (mejora M5)
+# stumpy>=1.12       # Matrix Profile (mejora M6)
