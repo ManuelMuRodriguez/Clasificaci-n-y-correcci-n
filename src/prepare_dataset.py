@@ -123,7 +123,7 @@ COLUMN_MAP_OPCUA = {
     "OPC_INVER_CO2_INTERIOR_S1":       "XCO2I",
     "OPC_INVER_HR_INTERIOR_S1":        "XHINV",
     "OPC_INVER_TEMP_INTERIOR_S1":      "XTINV",
-    "OPC_INVER_TEMP_SUELO5_S1":        "XTS",
+    "OPC_INVER_TEMP_SUELO5_S2":        "XTS",  # S1/S2 cruzado entre sistemas — S2 de OPC UA = S1 de SCADA
 }
 
 # ── Común ────────────────────────────────────────────────────────────────────
