@@ -116,7 +116,7 @@ INYECCION = {
         'prgint_max': 50.0,
     },
     'contextual_co2': {
-        'num_secuencias': 30,
+        'num_secuencias': 90,            # subido de 30 → 90 para equilibrar muestras
         'umbral_diff_co2': 30.0,         # v3 M9: condición relajada (era 50 ppm en v2)
         'duracion_min': 3,               # v3 M9: 3-8 min (era 5-15 min en v2)
         'duracion_max': 8,

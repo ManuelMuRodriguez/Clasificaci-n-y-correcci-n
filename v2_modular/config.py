@@ -108,7 +108,7 @@ INYECCION = {
         'prgint_max': 50.0,
     },
     'contextual_co2': {
-        'num_secuencias': 30,
+        'num_secuencias': 90,            # subido de 30 → 90 para equilibrar muestras
         # v2: condición más estricta que v3 (v3 usa 30 ppm y 3-8 min)
         'umbral_vent_abierta': 70.0,   # ventanas deben estar >70% abiertas
         'umbral_diff_co2': 50.0,       # gradiente mínimo CO2 interior-exterior
