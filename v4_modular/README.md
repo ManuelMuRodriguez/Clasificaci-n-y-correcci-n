@@ -159,6 +159,30 @@ Media  F1:       0.954 ± 0.012
 
 Esto es mucho más sólido que un único valor de un solo split, y responde directamente a la pregunta de un revisor: *"¿cómo sabes que generaliza?"*
 
+#### ¿Por qué el Fold 4 tiene menos datos en test que v2?
+
+El test del Fold 4 son solo los ~2 últimos meses (nov-dic 2024), mientras que v2 mezcla el 30% de todo el año:
+
+```
+v2 test: [ene✗][mar✗][jun✗][ago✗]... → ~158k filas (30% aleatorio del año completo)
+v4 test: [nov 24 → dic 24]           → ~105k filas (solo los 2 últimos meses)
+```
+
+v2 tiene ~52k filas más en test, pero incluye datos de todos los meses mezclados — es una ventaja artificial por leakage. A pesar de eso, **v4 obtiene mejor accuracy** (97.87% vs 97.78%), lo que demuestra que el modelo de v4 generaliza mejor de verdad.
+
+#### Pero si el Fold 4 solo evalúa nov-dic, ¿cómo sabemos que funciona en primavera o verano?
+
+Exactamente para eso sirven los folds 1-3. Cada fold evalúa un período distinto del año:
+
+```
+Fold 1 → test en may-jun 2024   (primavera)
+Fold 2 → test en jul-ago 2024   (verano — máxima radiación)
+Fold 3 → test en sep-oct 2024   (otoño)
+Fold 4 → test en nov-dic 2024   (invierno) ← modelo guardado
+```
+
+Si los 4 folds dan accuracy similar, el modelo funciona bien en todas las estaciones. Si algún fold falla, identifica exactamente en qué período hay problemas. Eso es lo que v2 con un solo 70/30 nunca puede responder.
+
 ### `05_modelo_clasificacion.ipynb`
 Entrena el **Modelo 2**: Random Forest multiclase para identificar el tipo de anomalía.
 
