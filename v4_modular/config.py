@@ -87,7 +87,7 @@ INYECCION = {
         'num_sensores_por_fila': 1,
     },
     'sensor_atascado': {
-        'num_secuencias': 50,
+        'num_secuencias': 150,           # subido de 50 → 150 para mejorar recall (era 56.3%)
         'duracion_min': 5,               # mínimo 5 minutos
         'duracion_max': 20,              # máximo 20 minutos
     },
