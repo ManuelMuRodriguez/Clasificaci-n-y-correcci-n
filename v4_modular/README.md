@@ -198,7 +198,7 @@ Aplica estrategias de corrección específicas por tipo:
 | Tipo | Estrategia |
 |------|-----------|
 | Datos Faltantes | IterativeImputer + RandomForestRegressor (multivariable) |
-| Sensor Atascado | Marcar como NaN + IterativeImputer |
+| Sensor Atascado | Fase híbrida (ver abajo) |
 | Ruido | Interpolación local (media de vecinos) |
 | Fuera de Rango | Interpolación local con umbrales adaptativos (M4) |
 | Desviación Correlación | Interpolación local con umbrales adaptativos (M4) |
@@ -207,6 +207,75 @@ Aplica estrategias de corrección específicas por tipo:
 **M4 — Umbrales adaptativos**: el umbral de corrección se ajusta por coeficiente de variación (CV) de cada sensor. Sensores más estables reciben umbrales más estrictos.
 
 **Salida:** `data/interim/06_datos_corregidos.parquet`
+
+#### Fase híbrida — Corrección de Sensor Atascado
+
+Un sensor atascado repite el mismo valor durante varios minutos seguidos. Detectarlo es fácil, pero corregirlo no siempre es igual: depende de si el sensor tiene un patrón temporal fuerte o no.
+
+**El problema con la interpolación lineal en sensores solares:**
+
+PRAD (radiación solar) vale ~800 W/m² al mediodía y 0 W/m² de noche. Si hay un atasco de 3 horas que empieza al mediodía y termina al anochecer, una interpolación lineal daría valores absurdos porque la señal no es lineal — sube y baja con el sol.
+
+```
+Atasco PRAD: 12:00 → 15:00, valor congelado en 650 W/m²
+Interpolación lineal: 650 → 650 → 650 → ... → valor real 15:00: 400 W/m²
+→ Incorrecto: no respeta la curva solar de la tarde
+```
+
+Por eso el sensor atascado tiene una **estrategia híbrida** según el tipo de sensor:
+
+---
+
+**Columnas DINÁMICAS** (`PRAD`, `PRGINT`) → corrección estacional
+
+Para cada minuto del atasco, se busca el valor que tenía ese mismo sensor a esa misma hora durante los 7 días anteriores y se toma la mediana:
+
+```
+Atasco detectado: PRGINT, 16:27 → 20:43 del 16-nov-2024
+↓
+Para corregir el minuto 16:27:
+  ¿Qué valía PRGINT a las 16:27 el 9-nov? → 180 W/m²
+  ¿Qué valía PRGINT a las 16:27 el 10-nov? → 165 W/m²
+  ...
+  ¿Qué valía PRGINT a las 16:27 el 15-nov? → 172 W/m²
+  → mediana = 172 W/m² → valor corregido
+Se repite para cada minuto del segmento (16:28, 16:29, ...)
+```
+
+---
+
+**Columnas ESTABLES** (XTINV, XHINV, XCO2I, PTEXT, ...) → interpolación lineal
+
+La temperatura, humedad y CO2 cambian lentamente y de forma suave. Una línea recta entre el valor antes y después del atasco es suficientemente precisa:
+
+```
+Atasco detectado: XTINV, valor 22.3°C repetido durante 8 minutos
+↓
+Valor justo antes del atasco:  22.1°C
+Valor justo después del atasco: 22.6°C
+→ Interpolación lineal: 22.2, 22.3, 22.4, 22.5, 22.6
+→ Correcto: la temperatura sube gradualmente
+```
+
+---
+
+**Flujo completo de la fase híbrida:**
+
+```
+Modelo 2 predice "Sensor Atascado" en un segmento
+              ↓
+   ¿Duración ≥ 5 minutos continuos?
+              ↓ sí
+   ┌──────────────────────────────┐
+   │ ¿Es PRAD o PRGINT?          │
+   │  Sí → corrección estacional  │  (misma hora, mediana 7 días atrás)
+   │  No → interpolación lineal   │  (línea recta entre extremos)
+   └──────────────────────────────┘
+```
+
+En la ejecución real sobre los datos de nov-dic 2024:
+- **PRAD**: 39 segmentos atascados → 25.659 minutos corregidos estacionalmente
+- **PRGINT**: 195 segmentos atascados → 27.945 minutos corregidos estacionalmente
 
 ### `07_evaluacion.ipynb`
 Evaluación cuantitativa **solo válida para datos sintéticos** (hay ground truth):
