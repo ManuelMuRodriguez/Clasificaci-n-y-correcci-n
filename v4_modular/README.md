@@ -131,6 +131,34 @@ Características clave:
 
 **Salida:** `data/models/modelo_1_detector.joblib`, `imputer_modelo_1.joblib`, `features_modelo_1.joblib`
 
+#### ¿Por qué TimeSeriesSplit y no train_test_split?
+
+`train_test_split` baraja las filas aleatoriamente antes de dividir. Esto produce **data leakage temporal**: el modelo ve datos de agosto para aprender a predecir enero, lo que infla artificialmente las métricas y no refleja el rendimiento real.
+
+Con tus ~553k filas (13 meses), TimeSeriesSplit k=4 divide así:
+
+```
+Fold 1: Train [dic 23 – abr 24] → Test [may 24 – jun 24]
+Fold 2: Train [dic 23 – jun 24] → Test [jul 24 – ago 24]
+Fold 3: Train [dic 23 – ago 24] → Test [sep 24 – oct 24]
+Fold 4: Train [dic 23 – oct 24] → Test [nov 24 – dic 24]  ← se guarda
+```
+
+Siempre el pasado entrena y el futuro se evalúa — sin leakage.
+
+**Se entrenan 4 modelos independientes**, uno por fold. El objetivo de los folds 1-3 no es elegir el mejor modelo sino **confirmar estabilidad temporal**: ¿funciona igual en primavera que en invierno? Si el accuracy varía mucho entre folds, el modelo no generaliza.
+
+**Siempre se guarda el Fold 4** (no el de mejor accuracy) porque es el que ha entrenado con más datos históricos y ha visto todas las estaciones, siendo el más robusto para producción e inferencia real.
+
+Las métricas que se reportan en el paper son la **media ± desviación** de los 4 folds:
+
+```
+Media  Accuracy: 95.5% ± 1.3%
+Media  F1:       0.954 ± 0.012
+```
+
+Esto es mucho más sólido que un único valor de un solo split, y responde directamente a la pregunta de un revisor: *"¿cómo sabes que generaliza?"*
+
 ### `05_modelo_clasificacion.ipynb`
 Entrena el **Modelo 2**: Random Forest multiclase para identificar el tipo de anomalía.
 

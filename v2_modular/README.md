@@ -93,7 +93,21 @@ Inyecta 6 tipos de anomalías sintéticas:
 ### `04_modelo_deteccion.ipynb`
 Entrena el **Modelo 1**: Random Forest binario (normal / anomalía).
 
-> **Diferencia clave con v3:** v2 usa `train_test_split` aleatorio 70/30. v3 usa `TimeSeriesSplit` k=4 para evitar data leakage temporal.
+> **Diferencia clave con v4:** v2 usa `train_test_split` aleatorio 70/30. v4 usa `TimeSeriesSplit` k=4 para evitar data leakage temporal.
+
+#### train_test_split 70/30 — cómo funciona y sus limitaciones
+
+`train_test_split` baraja todas las filas aleatoriamente y asigna el 70% a train y el 30% a test. Con `random_state=42` el resultado es siempre el mismo (reproducible).
+
+```
+Datos mezclados aleatoriamente:
+[ene✓] [mar✗] [jun✓] [ago✗] [oct✓] [dic✓] [feb✗] ...
+  train   test   train  test   train  train  test
+```
+
+**Problema en series temporales:** el modelo ve datos de agosto para predecir enero → **data leakage temporal**. Las métricas quedan infladas y no reflejan el rendimiento real sobre datos futuros.
+
+En v2 este es el baseline de referencia. v4 corrige esto con TimeSeriesSplit k=4, donde siempre el pasado entrena y el futuro se evalúa. La diferencia de métricas entre v2 y v4 cuantifica exactamente el impacto del leakage, lo que resulta útil para el paper.
 
 ### `05_modelo_clasificacion.ipynb`
 Entrena el **Modelo 2**: Random Forest multiclase (6 tipos de anomalía).
