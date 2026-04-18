@@ -155,6 +155,21 @@ TRAIN_TEST_SPLIT = {
 }
 
 # ─────────────────────────────────────────────
+# PARÁMETROS DE CORRECCIÓN
+# ─────────────────────────────────────────────
+
+FACTOR_UMBRAL_CORRECCION = 2.0   # desviaciones estándar para umbral de interpolación
+
+IMPUTER_RF_PARAMS = {            # RandomForestRegressor dentro de IterativeImputer
+    'n_estimators': 30,
+    'random_state': 42,
+    'max_depth':    10,
+    'min_samples_leaf': 5,
+    'n_jobs': -1,
+}
+IMPUTER_MAX_ITER = 10
+
+# ─────────────────────────────────────────────
 # RUTAS DE FICHEROS DE SALIDA
 # ─────────────────────────────────────────────
 
