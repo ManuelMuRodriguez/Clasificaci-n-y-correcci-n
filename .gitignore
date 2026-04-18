@@ -11,6 +11,15 @@ build/
 # Datos — generados ejecutando src/prepare_dataset.py
 data/*.csv
 data/*.parquet
+data/ensayos_ventanas/
+data/suelo_meses/
+data/tipos_ventilacion/
+data/ventanas_meses/
+
+# Datasets crudos grandes (OPCUA, SCADA)
+Dataset/OPCUA/
+Dataset/SCADA/
+Dataset/Ensayos/
 
 # Jupyter checkpoints
 .ipynb_checkpoints/

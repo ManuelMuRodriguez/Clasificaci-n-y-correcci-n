@@ -199,15 +199,19 @@ La relación no es fija — depende de la radiación solar y la ventilación:
 Un valor de `XTINV=44°C` con `PTEXT=10°C` y `UVENT_cen=0` es una **anomalía clara** aunque los tres valores individualmente estén dentro de su rango estadístico. El modelo actual no puede detectarlo.
 
 ### Radiación exterior ↔ Radiación interior
-La relación es casi lineal con un factor de transmisión del cristal:
+La relación es casi lineal con un factor de transmisión del plástico (film de polietileno PE):
 
 ```
 PRGINT ≈ PRAD × factor_transmisión  (factor típico: 0.4–0.7)
 ```
 
+El factor varía según el estado del plástico:
+- **Sin blanquear** (invierno): transmisión más alta (~0.5–0.7)
+- **Blanqueado** (verano): transmisión reducida intencionalmente (~0.3–0.5) para limitar el calentamiento interior
+
 - De noche `PRAD=0` → `PRGINT` debería ser 0. Si es > 0: anomalía (ya implementada como contextual).
-- De día `PRAD=800` → `PRGINT` debería estar entre 320 y 560. Si es 0: sensor interior roto.
-- Si el ratio cambia bruscamente de un día para otro: posible suciedad en el cristal o fallo de sensor.
+- De día `PRAD=800` → `PRGINT` debería estar entre 240 y 560 según época. Si es 0: sensor interior roto.
+- Si el ratio cae bruscamente de un día para otro fuera del período de blanqueo: posible suciedad o degradación del plástico, o fallo de sensor.
 
 El modelo ve ambas columnas por separado. **No calcula el ratio ni detecta cuando se rompe la proporción esperada.**
 

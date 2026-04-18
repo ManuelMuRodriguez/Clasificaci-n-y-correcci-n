@@ -39,9 +39,9 @@ Mapeo de columnas — OPC UA (mismas variables, prefijo OPC_)
   XCO2I     ← OPC_INVER_CO2_INTERIOR_S1
   XHINV     ← OPC_INVER_HR_INTERIOR_S1
   XTINV     ← OPC_INVER_TEMP_INTERIOR_S1
-  XTS       ← OPC_INVER_TEMP_SUELO5_S1
-  UVENT_cen ← media de OPC_UVCEN1_1_POS … OPC_UVCEN2_3_POS
-  UVENT_lN  ← media de OPC_UVLAT1N_POS … OPC_UVLAT2S_POS
+  XTS       ← OPC_INVER_TEMP_SUELO5_S1  (verificado: S1 OPC UA = S1 SCADA, MAE=0.017°C)
+  UVENT_cen ← media de OPC_UVCEN1_1_POS_VALOR … OPC_UVCEN2_3_POS_VALOR  (no _POS, que es binario 0/100)
+  UVENT_lN  ← media de OPC_UVLAT1N_POS_VALOR … OPC_UVLAT2S_POS_VALOR
 
 Uso
 ---
@@ -78,7 +78,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 FECHA_INICIO = "2024-03-06"  # Primer día completo con datos de ventanas (_POS)
-FECHA_FIN    = "2025-03-05"  # Un año completo. Test: 2025-03-06 → presente
+FECHA_FIN    = "2025-11-30"  # Último día con datos SCADA disponibles
 
 # ── SCADA ────────────────────────────────────────────────────────────────────
 
@@ -106,12 +106,12 @@ COLUMN_MAP_SCADA = {
 # ── OPC UA ───────────────────────────────────────────────────────────────────
 
 COLS_UVENT_CEN_OPCUA = [
-    "OPC_UVCEN1_1_POS", "OPC_UVCEN1_2_POS", "OPC_UVCEN1_3_POS",
-    "OPC_UVCEN2_1_POS", "OPC_UVCEN2_2_POS", "OPC_UVCEN2_3_POS",
+    "OPC_UVCEN1_1_POS_VALOR", "OPC_UVCEN1_2_POS_VALOR", "OPC_UVCEN1_3_POS_VALOR",
+    "OPC_UVCEN2_1_POS_VALOR", "OPC_UVCEN2_2_POS_VALOR", "OPC_UVCEN2_3_POS_VALOR",
 ]
 COLS_UVENT_LN_OPCUA = [
-    "OPC_UVLAT1N_POS", "OPC_UVLAT1ON_POS", "OPC_UVLAT1OS_POS", "OPC_UVLAT1S_POS",
-    "OPC_UVLAT2E_POS", "OPC_UVLAT2N_POS",  "OPC_UVLAT2S_POS",
+    "OPC_UVLAT1N_POS_VALOR", "OPC_UVLAT1ON_POS_VALOR", "OPC_UVLAT1OS_POS_VALOR", "OPC_UVLAT1S_POS_VALOR",
+    "OPC_UVLAT2E_POS_VALOR", "OPC_UVLAT2N_POS_VALOR",  "OPC_UVLAT2S_POS_VALOR",
 ]
 COLUMN_MAP_OPCUA = {
     "OPC_CO2_EXTERIOR_10M":            "PCO2EXT",
@@ -123,7 +123,7 @@ COLUMN_MAP_OPCUA = {
     "OPC_INVER_CO2_INTERIOR_S1":       "XCO2I",
     "OPC_INVER_HR_INTERIOR_S1":        "XHINV",
     "OPC_INVER_TEMP_INTERIOR_S1":      "XTINV",
-    "OPC_INVER_TEMP_SUELO5_S2":        "XTS",  # S1/S2 cruzado entre sistemas — S2 de OPC UA = S1 de SCADA
+    "OPC_INVER_TEMP_SUELO5_S1":        "XTS",
 }
 
 # ── Común ────────────────────────────────────────────────────────────────────
@@ -133,17 +133,63 @@ VARIABLES_PAPER = [
     "UVENT_cen", "UVENT_lN", "XCO2I", "XHINV", "XTINV", "XTS",
 ]
 
+# Períodos donde OPC UA tiene datos incorrectos para una variable concreta.
+# En estos rangos NO se usa OPC UA para rellenar NaN de SCADA.
+# Formato: {variable: [(inicio, fin), ...]}   — ambos extremos inclusive, UTC.
+OPCUA_PERIODOS_EXCLUIDOS: dict[str, list[tuple[str, str]]] = {
+    # XTS (INVER_TEMP_SUELO5_S1): el sensor OPC UA estaba mal conectado en julio
+    # y los primeros días de agosto de 2024. Verificado visualmente con comparar_xts_opcua.py.
+    "XTS": [("2024-07-01", "2024-08-04 23:59:59")],
+}
+
 COLS_FINALES = [
     "Fecha",
     "PCO2EXT", "PHEXT", "PRAD", "PRGINT", "PTEXT", "PVV",
     "UVENT_cen", "UVENT_lN",
     "XCO2I", "XHINV", "XTINV", "XTS",
+    "ensayo",
+]
+
+# Ensayos registrados — fuente: Dataset/Ensayos/Lista de ensayos Invernadero AgroConnect.xlsx
+# Formato: (fecha_inicio, fecha_fin, tipo)  — ambos extremos inclusive (día completo UTC)
+# Tipos: "ventilacion", "calefaccion", "deshumidificacion", "co2"
+ENSAYOS: list[tuple[str, str, str]] = [
+    # ── 2024 ──────────────────────────────────────────────────────────────────
+    ("2024-03-18", "2024-03-25", "ventilacion"),
+    ("2024-04-01", "2024-04-05", "ventilacion"),
+    ("2024-04-23", "2024-04-24", "ventilacion"),
+    ("2024-11-18", "2024-11-24", "ventilacion"),
+    # ── 2025 ──────────────────────────────────────────────────────────────────
+    ("2025-01-13", "2025-02-26", "calefaccion"),
+    ("2025-03-13", "2025-03-27", "deshumidificacion"),
+    ("2025-04-04", "2025-04-04", "calefaccion"),
+    ("2025-04-19", "2025-04-19", "ventilacion"),
+    ("2025-06-12", "2025-06-24", "ventilacion"),
+    ("2025-07-22", "2025-07-22", "co2"),
+    ("2025-09-17", "2025-09-17", "ventilacion"),
+    ("2025-09-24", "2025-09-24", "ventilacion"),
+    ("2025-09-30", "2025-09-30", "ventilacion"),
+    ("2025-11-19", "2025-11-20", "ventilacion"),
 ]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Pipeline
 # ─────────────────────────────────────────────────────────────────────────────
+
+def _agregar_columna_ensayo(df: pd.DataFrame) -> pd.DataFrame:
+    """Añade columna 'ensayo' con el tipo de ensayo activo en cada timestamp (o vacío)."""
+    df["ensayo"] = ""
+    fecha = pd.to_datetime(df["Fecha"], dayfirst=True, errors="coerce")
+    for inicio, fin, tipo in ENSAYOS:
+        t_ini = pd.Timestamp(inicio)
+        t_fin = pd.Timestamp(fin + " 23:59:59")
+        mask = (fecha >= t_ini) & (fecha <= t_fin)
+        df.loc[mask, "ensayo"] = tipo
+    n = (df["ensayo"] != "").sum()
+    logger.info(f"  Columna 'ensayo': {n:,} registros marcados con tipo de ensayo")
+    return df
+
 
 def _agregar_ventilacion(df, cols_cen, cols_ln):
     cols_cen_ok = [c for c in cols_cen if c in df.columns]
@@ -244,12 +290,24 @@ def preparar_dataset_combined(dataset_dir: Path, output_path: Path) -> pd.DataFr
     df_o_aligned = df_o.reindex(df_s.index)
     df_combined = df_s.copy()
     for col in VARIABLES_PAPER:
-        if col in df_combined.columns and col in df_o_aligned.columns:
-            mask = df_combined[col].isna()
-            df_combined.loc[mask, col] = df_o_aligned.loc[mask, col]
-            n_filled = mask.sum()
-            if n_filled > 0:
-                logger.info(f"  {col}: rellenados {n_filled:,} NaN con OPC UA")
+        if col not in df_combined.columns or col not in df_o_aligned.columns:
+            continue
+
+        mask = df_combined[col].isna()
+
+        # Excluir períodos donde OPC UA tiene datos incorrectos para esta variable
+        if col in OPCUA_PERIODOS_EXCLUIDOS:
+            for inicio_exc, fin_exc in OPCUA_PERIODOS_EXCLUIDOS[col]:
+                periodo_malo = (df_combined.index >= inicio_exc) & (df_combined.index <= fin_exc)
+                mask = mask & ~periodo_malo
+                n_excluidos = (df_combined[col].isna() & periodo_malo).sum()
+                if n_excluidos > 0:
+                    logger.info(f"  {col}: excluidos {n_excluidos:,} minutos de OPC UA ({inicio_exc} → {fin_exc}, sensor mal conectado)")
+
+        df_combined.loc[mask, col] = df_o_aligned.loc[mask, col]
+        n_filled = mask.sum()
+        if n_filled > 0:
+            logger.info(f"  {col}: rellenados {n_filled:,} NaN con OPC UA")
 
     df_combined = df_combined.reset_index()
 
@@ -301,6 +359,7 @@ def _resamplear_y_exportar(df: pd.DataFrame, output_path: Path) -> pd.DataFrame:
 
 
 def _exportar(df: pd.DataFrame, output_path: Path) -> pd.DataFrame:
+    df = _agregar_columna_ensayo(df)
     cols_presentes = [c for c in COLS_FINALES if c in df.columns]
     df = df[cols_presentes]
     df["Fecha"] = df["Fecha"].dt.strftime("%d/%m/%Y %H:%M:%S")
@@ -351,7 +410,7 @@ def main():
 
     if args.output is None:
         nombres = {"scada": "scada", "opcua": "opcua", "combined": "combined"}
-        nombre = f"{nombres[args.source]}_2024_03_06-2025_03_05_1min.csv"
+        nombre = f"{nombres[args.source]}_2024_03_06-2025_11_30_1min.csv"
         args.output = PROJECT_ROOT / "data" / nombre
 
     if args.source == "scada":
